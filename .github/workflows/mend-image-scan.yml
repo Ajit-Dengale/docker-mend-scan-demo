@@ -1,0 +1,41 @@
+name: Mend Image Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Docker image name (e.g., my-app:latest)'
+        required: true
+        default: 'my-app:latest'
+      product:
+        description: 'Mend product name'
+        required: true
+        default: 'local-dev'
+      project:
+        description: 'Mend project name'
+        required: true
+        default: 'my-app'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Mend CLI
+        run: |
+          sudo curl -L https://downloads.mend.io/cli/linux_amd64/mend -o /usr/local/bin/mend
+          sudo chmod +x /usr/local/bin/mend
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ inputs.image_name }} .
+
+      - name: Scan Docker image using Mend
+        run: |
+          mend image "${{ inputs.image_name }}" \
+            --product "${{ inputs.product }}" \
+            --project "${{ inputs.project }}"
+
