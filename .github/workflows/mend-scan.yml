@@ -26,9 +26,8 @@ jobs:
 
       - name: Install Mend CLI
         run: |
-          curl -L https://downloads.mend.io/cli-standalone/mend_linux_amd64.tgz -o mend.tgz
-          tar -xvzf mend.tgz
-          sudo mv mend /usr/local/bin/mend
+	  sudo curl https://downloads.mend.io/cli/linux_amd64/mend -o /usr/local/bin/mend
+	  sudo mv mend /usr/local/bin/mend
           chmod +x /usr/local/bin/mend
 
       - name: Build Docker Image
