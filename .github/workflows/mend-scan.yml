@@ -1,10 +1,10 @@
-name: Mend Local Image Scan
+name: Mend Image Scan
 
 on:
   workflow_dispatch:
     inputs:
       image_name:
-        description: 'Docker image name to scan'
+        description: 'Docker image name'
         required: true
         default: 'my-app:latest'
       product:
@@ -21,37 +21,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: Install Mend CLI
-      run: |
-        curl -L https://downloads.mend.io/cli/linux_amd64/mend -o /usr/local/bin/mend
-        chmod +x /usr/local/bin/mend
+      - name: Install Mend CLI
+        run: |
+          curl -L https://downloads.mend.io/cli-standalone/mend_linux_amd64.tgz -o mend.tgz
+          tar -xvzf mend.tgz
+          sudo mv mend /usr/local/bin/mend
+          chmod +x /usr/local/bin/mend
 
-    - name: Run Mend Docker Scan
-      run: |
-        mend docker \
-          --image-name "${{ inputs.image_name }}" \
-          --product "${{ inputs.product }}" \
-          --project "${{ inputs.project }}" \
-          > scan_report.txt
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ inputs.image_name }} .
 
-        SUMMARY=$(grep -oP 'Detected \d+ Vulnerabilities.*' scan_report.txt | head -n 1)
-        echo "$SUMMARY" > $GITHUB_WORKSPACE/summary.txt
-
-    - name: Fail on critical/high vulnerabilities
-      run: |
-        CRITICAL=$(grep -i "CRITICAL" $GITHUB_WORKSPACE/summary.txt | awk -F ':' '{print $2}' | tr -d ' ')
-        HIGH=$(grep -i "HIGH" $GITHUB_WORKSPACE/summary.txt | awk -F ':' '{print $2}' | tr -d ' ')
-
-        echo "Critical: $CRITICAL"
-        echo "High: $HIGH"
-
-        if [[ "$CRITICAL" -ne 0 || "$HIGH" -ne 0 ]]; then
-          echo -e "\033[0;31m❌ Failing due to critical/high vulnerabilities.\033[0m"
-          exit 1
-        else
-          echo "✅ No critical/high vulnerabilities found."
-        fi
+      - name: Scan Docker Image
+        run: |
+          mend image "${{ inputs.image_name }}" \
+            --product "${{ inputs.product }}" \
+            --project "${{ inputs.project }}"
 
